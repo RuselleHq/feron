@@ -1,0 +1,207 @@
+import type { Product } from '@/types'
+
+export const products: Product[] = [
+  {
+    id: 'gate-01',
+    slug: 'raspashnye-vorota-klassika',
+    name: { ru: 'Ворота распашные «Классика»', kz: 'Классикалық бүктемелі қақпа' },
+    description: {
+      ru: 'Кованые распашные ворота с классическим узором. Горячее цинкование + порошковое покрытие.',
+      kz: 'Классикалық өрнекті соғылған бүктемелі қақпа. Ыстық мырышталу + ұнтақты бояу.',
+    },
+    categoryId: 'gates',
+    images: ['/images/products/gate-01-1.png', '/images/products/gate-01-2.png', '/images/products/gate-01-3.png'],
+    sizes: [
+      { label: { ru: '2×2 м', kz: '2×2 м' }, width: 200, height: 200, priceFrom: 85000 },
+      { label: { ru: '3×2 м', kz: '3×2 м' }, width: 300, height: 200, priceFrom: 115000 },
+      { label: { ru: '4×2 м', kz: '4×2 м' }, width: 400, height: 200, priceFrom: 145000 },
+    ],
+    pricePerSqM: 18000,
+    featured: true,
+    homeSection: 'popular',
+    tags: ['ковка', 'классика'],
+  },
+  {
+    id: 'gate-02',
+    slug: 'otkatnye-vorota-modern',
+    name: { ru: 'Ворота откатные «Модерн»', kz: 'Модерн жылжымалы қақпа' },
+    description: {
+      ru: 'Автоматические откатные ворота в современном стиле. Профильная труба 60×60.',
+      kz: 'Заманауи стильдегі автоматты жылжымалы қақпа. Профильді труба 60×60.',
+    },
+    categoryId: 'gates',
+    images: ['/images/products/gate-02-1.jpg'],
+    sizes: [
+      { label: { ru: '3×2 м', kz: '3×2 м' }, width: 300, height: 200, priceFrom: 130000 },
+      { label: { ru: '4×2 м', kz: '4×2 м' }, width: 400, height: 200, priceFrom: 165000 },
+    ],
+    pricePerSqM: 16500,
+    homeSection: 'popular',
+  },
+  {
+    id: 'canopy-01',
+    slug: 'naves-nad-kryltsom',
+    name: { ru: 'Навес над крыльцом', kz: 'Кіреберіс үстіндегі сарай' },
+    description: {
+      ru: 'Металлический навес над входной группой. Поликарбонат или профнастил.',
+      kz: 'Кіреберіс тобы үстіндегі металл сарай. Поликарбонат немесе профнастил.',
+    },
+    categoryId: 'canopies',
+    images: ['/images/products/canopy-01-1.jpg'],
+    sizes: [
+      { label: { ru: '1.5×2 м', kz: '1.5×2 м' }, width: 150, height: 200, priceFrom: 45000 },
+      { label: { ru: '2×3 м', kz: '2×3 м' }, width: 200, height: 300, priceFrom: 72000 },
+    ],
+    pricePerSqM: 12000,
+    homeSection: 'popular',
+  },
+  {
+    id: 'canopy-02',
+    slug: 'naves-dlya-avtomobilya',
+    name: { ru: 'Навес для автомобиля', kz: 'Автомобиль үшін сарай' },
+    description: {
+      ru: 'Навес-парковка на 1-2 автомобиля. Оцинкованный профиль, кровля на выбор.',
+      kz: '1-2 автомобильге арналған жабын-тұрақ. Мырышталған профиль, шатыр таңдауда.',
+    },
+    categoryId: 'canopies',
+    images: ['/images/products/canopy-02-1.jpg'],
+    sizes: [
+      { label: { ru: '3×5 м', kz: '3×5 м' }, width: 300, height: 500, priceFrom: 125000 },
+      { label: { ru: '6×5 м', kz: '6×5 м' }, width: 600, height: 500, priceFrom: 220000 },
+    ],
+    pricePerSqM: 9500,
+    homeSection: 'popular',
+  },
+  {
+    id: 'railing-01',
+    slug: 'perila-lestnichnye-kovanye',
+    name: { ru: 'Перила лестничные кованые', kz: 'Соғылған баспалдақ тұтқасы' },
+    description: {
+      ru: 'Кованые перила ручной работы для внутренних и наружных лестниц.',
+      kz: 'Ішкі және сыртқы баспалдақтарға арналған қолмен соғылған тұтқа.',
+    },
+    categoryId: 'railings',
+    images: ['/images/products/railing-01-1.jpg'],
+    sizes: [
+      { label: { ru: '1 п.м.', kz: '1 п.м.' }, width: 100, height: 90, priceFrom: 8500 },
+    ],
+    pricePerSqM: 9500,
+    homeSection: 'ideas',
+  },
+  {
+    id: 'grill-01',
+    slug: 'mangal-stacionarny',
+    name: { ru: 'Мангал стационарный «Люкс»', kz: 'Стационарлы мангал «Люкс»' },
+    description: {
+      ru: 'Стационарный мангал из 4мм металла с крышкой и разделочным столиком.',
+      kz: '4мм металлдан жасалған қақпақ пен кесу столы бар стационарлы мангал.',
+    },
+    categoryId: 'grills',
+    images: ['/images/products/grill-01-1.jpg'],
+    sizes: [
+      { label: { ru: '100×40 см', kz: '100×40 см' }, width: 100, height: 40, priceFrom: 28000 },
+      { label: { ru: '150×40 см', kz: '150×40 см' }, width: 150, height: 40, priceFrom: 38000 },
+    ],
+    pricePerSqM: 0,
+    homeSection: 'ideas',
+  },
+  {
+    id: 'fence-01',
+    slug: 'zabor-profnastil',
+    name: { ru: 'Забор из профнастила', kz: 'Профнастилден жасалған қоршау' },
+    description: {
+      ru: 'Забор с металлическими секциями и профнастилом. Долговечно и надёжно.',
+      kz: 'Металл секциялары мен профнастилі бар қоршау. Ұзақ мерзімді және сенімді.',
+    },
+    categoryId: 'fences',
+    images: ['/images/products/fence-01-1.jpg'],
+    sizes: [
+      { label: { ru: '1 п.м. / высота 1.5м', kz: '1 п.м. / биіктік 1.5м' }, width: 100, height: 150, priceFrom: 6500 },
+      { label: { ru: '1 п.м. / высота 2м', kz: '1 п.м. / биіктік 2м' }, width: 100, height: 200, priceFrom: 8500 },
+    ],
+    pricePerSqM: 4500,
+    homeSection: 'ideas',
+  },
+  {
+    id: 'stair-01',
+    slug: 'lestnica-metallicheskaya',
+    name: { ru: 'Лестница металлическая на второй этаж', kz: 'Екінші қабатқа металл баспалдақ' },
+    description: {
+      ru: 'Металлическая лестница с деревянными ступенями и коваными перилами.',
+      kz: 'Ағаш сатылары мен соғылған тұтқасы бар металл баспалдақ.',
+    },
+    categoryId: 'stairs',
+    images: ['/images/products/stair-01-1.jpg'],
+    sizes: [
+      { label: { ru: 'Стандарт (высота 2.7м)', kz: 'Стандарт (биіктік 2.7м)' }, width: 90, height: 270, priceFrom: 185000 },
+    ],
+    pricePerSqM: 0,
+    homeSection: 'ideas',
+    featured: true,
+  },
+  {
+    id: 'pergola-01',
+    slug: 'besedka-metallicheskaya',
+    name: { ru: 'Беседка металлическая «Уют»', kz: 'Металл беседка «Жайлылық»' },
+    description: {
+      ru: 'Садовая беседка из профильной трубы с декоративными элементами. Под заказ любой размер.',
+      kz: 'Декоративті элементтері бар профильді трубадан жасалған бақша беседкасы.',
+    },
+    categoryId: 'pergolas',
+    images: ['/images/products/pergola-01-1.jpg'],
+    sizes: [
+      { label: { ru: '3×3 м', kz: '3×3 м' }, width: 300, height: 300, priceFrom: 145000 },
+      { label: { ru: '4×4 м', kz: '4×4 м' }, width: 400, height: 400, priceFrom: 220000 },
+    ],
+    pricePerSqM: 16000,
+  },
+  {
+    id: 'gate-03',
+    slug: 'kovanye-vorota-premium',
+    name: { ru: 'Ворота кованые «Премиум»', kz: '«Премиум» соғылған қақпа' },
+    description: {
+      ru: 'Эксклюзивные кованые ворота ручной работы. Каждое изделие уникально.',
+      kz: 'Қолдан жасалған эксклюзивті соғылған қақпа. Әр өнім бірегей.',
+    },
+    categoryId: 'gates',
+    images: ['/images/products/gate-03-1.jpg'],
+    sizes: [
+      { label: { ru: '3×2 м', kz: '3×2 м' }, width: 300, height: 200, priceFrom: 250000 },
+      { label: { ru: '4×2 м', kz: '4×2 м' }, width: 400, height: 200, priceFrom: 320000 },
+    ],
+    pricePerSqM: 28000,
+    featured: true,
+    tags: ['ковка', 'премиум', 'эксклюзив'],
+  },
+  {
+    id: 'furniture-01',
+    slug: 'stol-metallichesky-loft',
+    name: { ru: 'Стол в стиле лофт', kz: 'Лофт стиліндегі үстел' },
+    description: {
+      ru: 'Обеденный или рабочий стол с металлическим каркасом. Столешница из дерева или стекла.',
+      kz: 'Металл жиектемесі бар ас немесе жұмыс үстелі. Ағаш немесе шыны үстел тақтайы.',
+    },
+    categoryId: 'furniture',
+    images: ['/images/products/furniture-01-1.jpg'],
+    sizes: [
+      { label: { ru: '120×80 см', kz: '120×80 см' }, width: 120, height: 80, priceFrom: 42000 },
+      { label: { ru: '160×80 см', kz: '160×80 см' }, width: 160, height: 80, priceFrom: 55000 },
+    ],
+    pricePerSqM: 0,
+  },
+  {
+    id: 'railing-02',
+    slug: 'perila-nerzhaveyushie',
+    name: { ru: 'Перила из нержавеющей стали', kz: 'Тотқа төзімді болатқа арналған тұтқа' },
+    description: {
+      ru: 'Современные перила из нержавеющей стали и стекла. Для домов и офисов.',
+      kz: 'Үйлер мен кеңселерге арналған заманауи болат пен шыны тұтқа.',
+    },
+    categoryId: 'railings',
+    images: ['/images/products/railing-02-1.jpg'],
+    sizes: [
+      { label: { ru: '1 п.м.', kz: '1 п.м.' }, width: 100, height: 100, priceFrom: 12000 },
+    ],
+    pricePerSqM: 13500,
+  },
+]
