@@ -36,9 +36,11 @@ node .\node_modules\next\dist\bin\next dev
 ## Структура
 
 ```
-app/
+app/                      — ЕДИНСТВЕННЫЙ роутинг (Next.js отдаёт приоритет ./app над ./src/app)
   layout.tsx              — root layout, провайдеры, <BottomNav>
   page.tsx                — главная (HeroBanner, CategoryStrip, ProductRow)
+  api/
+    order/route.ts        — POST-приём заявки, отправка в Telegram (server-only, секреты только здесь)
   catalog/
     page.tsx              — каталог с фильтрами
     [slug]/page.tsx       — детальная страница товара (CLIENT COMPONENT)
@@ -69,8 +71,13 @@ data/
 
 lib/
   i18n.ts                 — переводы RU/KZ (tr.home.hero.title = 'Металлоизделия\nпод заказ')
-  telegram.ts
-  utils.ts                — cn(), calcPrice(), formatPrice()
+  telegram.ts             — SERVER ONLY: сборка/отправка сообщения, escape HTML
+  contacts.ts             — единый источник контактов (телефон/WhatsApp/Telegram)
+  phone.ts                — normalizeKzPhone(), formatKzPhone()
+  pricing.ts              — estimatePrice() по priceMethod товара
+  order.ts                — zod-схема заявки (общая для формы и API) + лимиты файла
+  whatsapp.ts             — buildWhatsAppLink() → null, если номер не задан
+  utils.ts                — cn(), formatPrice()
 
 contexts/
   lang-context.tsx        — useLang() — используется везде, 26 рёбер в графе
@@ -107,13 +114,15 @@ public/
 --bottom-nav-height: 84px
 ```
 
-## Переменные окружения (.env.local)
+## Переменные окружения (.env.local, образец — .env.example)
 
 ```
-NEXT_PUBLIC_TELEGRAM_BOT_TOKEN=
-NEXT_PUBLIC_TELEGRAM_CHAT_ID=
-NEXT_PUBLIC_WHATSAPP_PHONE=
-NEXT_PUBLIC_PHONE=
+TELEGRAM_BOT_TOKEN=            # СЕКРЕТ, только сервер. Никогда не NEXT_PUBLIC_
+TELEGRAM_CHAT_ID=              # СЕКРЕТ, только сервер
+NEXT_PUBLIC_PHONE=             # публично; пусто = кнопка «Позвонить» скрыта
+NEXT_PUBLIC_WHATSAPP_PHONE=    # публично; пусто = кнопка WhatsApp скрыта
+NEXT_PUBLIC_TELEGRAM_USERNAME= # публично; пусто = строка Telegram скрыта
+TELEGRAM_API_BASE=             # опционально, только для тестов с моком
 ```
 
 ## Правила для агентов
@@ -124,3 +133,7 @@ NEXT_PUBLIC_PHONE=
 - `TopBar` без `title` показывает "Feron Craft" — намеренно.
 - Продуктовая страница — `'use client'`, не переделывай в server component.
 - Не добавляй комментарии в код без явной просьбы.
+- Заявки уходят ТОЛЬКО через `POST /api/order`. Не импортируй `lib/telegram.ts` в клиентские компоненты.
+- Расчёт цены — `lib/pricing.ts` по `product.priceMethod` (`area` | `length` | `quote`). Формулу «ширина × высота × цена за м²» не возвращать: она расходилась с ценами стандартных размеров.
+- Лимит вложения 4 МБ — это потолок Vercel (4.5 МБ на тело запроса), а не произвольное число.
+- `src/app/` — мёртвый остаток скаффолда, роутинг идёт из `app/`.

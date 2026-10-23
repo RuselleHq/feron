@@ -1,66 +1,91 @@
 'use client'
 
-import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
-import { useLang } from '@/contexts/lang-context'
-import { cn } from '@/lib/utils'
+import type { ReactNode } from 'react'
 
 interface TopBarProps {
+  /** Large left-aligned screen title (Каталог, Избранное) */
   title?: string
-  showBack?: boolean
-  backHref?: string
-  action?: React.ReactNode
-  className?: string
+  /** Centered title with a back control (Калькулятор, О мастерской) */
+  variant?: 'large' | 'modal'
+  onBack?: () => void
+  action?: ReactNode
 }
 
-export function TopBar({ title, showBack, backHref = '/', action, className }: TopBarProps) {
-  const { lang, setLang } = useLang()
+export function TopBar({ title, variant = 'large', onBack, action }: TopBarProps) {
+  if (variant === 'modal') {
+    return (
+      <header
+        className="sticky top-0 z-30 flex items-center px-4"
+        style={{
+          height: 56,
+          background: 'var(--bg)',
+          paddingTop: 'env(safe-area-inset-top, 0px)',
+        }}
+      >
+        <button
+          onClick={onBack}
+          aria-label="Назад"
+          className="press flex items-center justify-center"
+          style={{ width: 36, height: 36, marginLeft: -8 }}
+        >
+          <ChevronLeft size={24} color="var(--text)" strokeWidth={2} />
+        </button>
+        <span className="flex-1 text-center text-[16px] font-semibold" style={{ color: 'var(--text)' }}>
+          {title}
+        </span>
+        <div style={{ width: 36 }}>{action}</div>
+      </header>
+    )
+  }
 
   return (
     <header
-      className={cn('sticky top-0 z-40 flex items-center h-[52px] px-4', className)}
-      style={{
-        background: 'var(--color-surface)',
-        borderBottom: '1px solid var(--color-border-subtle)',
-        borderBottomLeftRadius: 16,
-        borderBottomRightRadius: 16,
-        boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
-      }}
+      className="flex items-center justify-between px-4"
+      style={{ paddingTop: 'calc(14px + env(safe-area-inset-top, 0px))', paddingBottom: 14 }}
     >
-      {/* Left */}
-      <div className="w-10">
-        {showBack && (
-          <Link
-            href={backHref}
-            className="flex items-center justify-center w-9 h-9 -ml-1 rounded-xl transition-colors active:opacity-60"
-          >
-            <ChevronLeft size={22} strokeWidth={1.8} style={{ color: 'var(--color-text)' }} />
-          </Link>
-        )}
-      </div>
-
-      {/* Title */}
-      <div className="flex-1 text-center">
-        <span className="text-[15px] font-semibold" style={{ color: 'var(--color-text)' }}>
-          {title ?? 'Feron Craft'}
-        </span>
-      </div>
-
-      {/* Right: lang toggle or custom action */}
-      <div className="w-10 flex justify-end">
-        {action ?? (
-          <button
-            onClick={() => setLang(lang === 'ru' ? 'kz' : 'ru')}
-            className="h-7 px-2 rounded-md text-[12px] font-semibold transition-colors active:opacity-60"
-            style={{
-              background: 'var(--color-bg-muted)',
-              color: 'var(--color-text-secondary)',
-            }}
-          >
-            {lang === 'ru' ? 'KZ' : 'RU'}
-          </button>
-        )}
-      </div>
+      <h1 className="text-[26px] font-bold tracking-tight" style={{ color: 'var(--text)' }}>
+        {title}
+      </h1>
+      {action}
     </header>
+  )
+}
+
+export function RoundButton({
+  children,
+  onClick,
+  href,
+  label,
+  size = 40,
+  background = 'var(--surface-2)',
+}: {
+  children: ReactNode
+  onClick?: () => void
+  href?: string
+  label?: string
+  size?: number
+  background?: string
+}) {
+  const style = {
+    width: size,
+    height: size,
+    borderRadius: 'var(--r-full)',
+    background,
+    border: '1px solid var(--border)',
+  } as const
+
+  if (href) {
+    return (
+      <a href={href} aria-label={label} className="press flex items-center justify-center" style={style}>
+        {children}
+      </a>
+    )
+  }
+
+  return (
+    <button onClick={onClick} aria-label={label} className="press flex items-center justify-center" style={style}>
+      {children}
+    </button>
   )
 }

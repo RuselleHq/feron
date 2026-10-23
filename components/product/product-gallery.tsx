@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import useEmblaCarousel from 'embla-carousel-react'
-import { IconHammer } from '@/components/ui/icons'
 import { X } from 'lucide-react'
+import { CATEGORY_ICONS, IconHammer } from '@/components/ui/icons'
 
 /* ── Lightbox (fullscreen, swipe + thumbnails) ── */
 function Lightbox({
@@ -47,25 +47,20 @@ function Lightbox({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-[200] flex flex-col"
-      style={{ background: 'rgba(0,0,0,0.94)' }}
-    >
-      {/* Top bar */}
+    <div className="fixed inset-0 z-[200] flex flex-col" style={{ background: 'rgba(0,0,0,0.96)' }}>
       <div className="flex items-center justify-between px-4 pt-4 pb-2 flex-shrink-0">
-        <span className="text-[13px]" style={{ color: 'rgba(255,255,255,0.5)' }}>
+        <span className="text-[13px]" style={{ color: 'var(--text-3)' }}>
           {index + 1} / {images.length}
         </span>
         <button
-          className="w-9 h-9 flex items-center justify-center rounded-full"
-          style={{ background: 'rgba(255,255,255,0.1)' }}
+          className="press w-9 h-9 flex items-center justify-center"
+          style={{ borderRadius: 'var(--r-full)', background: 'rgba(255,255,255,0.1)' }}
           onClick={onClose}
         >
           <X size={18} color="white" />
         </button>
       </div>
 
-      {/* Main image with swipe */}
       <div
         className="flex-1 flex items-center justify-center overflow-hidden px-4"
         onTouchStart={onTouchStart}
@@ -86,28 +81,22 @@ function Lightbox({
         />
       </div>
 
-      {/* Thumbnails */}
       {images.length > 1 && (
-        <div className="flex-shrink-0 flex gap-2 px-4 py-3 overflow-x-auto">
+        <div className="flex-shrink-0 flex gap-2 px-4 py-3 overflow-x-auto scrollbar-hide">
           {images.map((src, i) => (
             <button
               key={i}
               onClick={() => switchTo(i)}
-              className="flex-shrink-0 rounded-xl overflow-hidden transition-all"
+              className="flex-shrink-0 overflow-hidden transition-all"
               style={{
-                width: 64,
-                height: 64,
-                border: i === index
-                  ? '2px solid var(--color-gold)'
-                  : '2px solid transparent',
-                opacity: i === index ? 1 : 0.5,
+                width: 60,
+                height: 60,
+                borderRadius: 12,
+                border: i === index ? '2px solid var(--gold)' : '2px solid transparent',
+                opacity: i === index ? 1 : 0.45,
               }}
             >
-              <img
-                src={src}
-                alt={`${name} ${i + 1}`}
-                className="w-full h-full object-cover"
-              />
+              <img src={src} alt={`${name} ${i + 1}`} className="w-full h-full object-cover" />
             </button>
           ))}
         </div>
@@ -119,9 +108,10 @@ function Lightbox({
 interface ProductGalleryProps {
   images: string[]
   name: string
+  categoryId: string
 }
 
-export function ProductGallery({ images, name }: ProductGalleryProps) {
+export function ProductGallery({ images, name, categoryId }: ProductGalleryProps) {
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true })
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
@@ -137,27 +127,31 @@ export function ProductGallery({ images, name }: ProductGalleryProps) {
     return () => { emblaApi.off('select', onSelect) }
   }, [emblaApi, onSelect])
 
+  const frameStyle = {
+    height: 'clamp(300px, 46vh, 430px)',
+  } as const
+
   if (images.length === 0) {
+    const Icon = CATEGORY_ICONS[categoryId] ?? IconHammer
     return (
       <div
-        className="w-full aspect-[4/3] flex items-center justify-center"
-        style={{ background: 'var(--color-bg-muted)' }}
+        className="w-full flex items-center justify-center"
+        style={{ ...frameStyle, background: 'linear-gradient(160deg, #1b1b1e 0%, #121214 100%)' }}
       >
-        <IconHammer size={56} color="var(--color-border)" strokeWidth={1.2} />
+        <Icon size={72} color="rgba(255,255,255,0.11)" strokeWidth={1.1} />
       </div>
     )
   }
 
   return (
     <>
-      {/* ── Gallery strip (4:3) ── */}
-      <div className="relative">
-        <div className="overflow-hidden" ref={emblaRef}>
-          <div className="flex">
+      <div className="relative" style={frameStyle}>
+        <div className="overflow-hidden h-full" ref={emblaRef}>
+          <div className="flex h-full">
             {images.map((src, i) => (
               <div
                 key={i}
-                className="flex-[0_0_100%] aspect-[4/3] overflow-hidden cursor-zoom-in"
+                className="flex-[0_0_100%] h-full overflow-hidden cursor-zoom-in"
                 onClick={() => setLightboxIndex(i)}
               >
                 <img
@@ -171,27 +165,31 @@ export function ProductGallery({ images, name }: ProductGalleryProps) {
           </div>
         </div>
 
-        {/* Dots */}
+        {/* Bottom fade into the page */}
+        <div
+          className="absolute inset-x-0 bottom-0 pointer-events-none"
+          style={{ height: 120, background: 'linear-gradient(180deg, rgba(11,11,12,0) 0%, var(--bg) 100%)' }}
+        />
+
         {images.length > 1 && (
-          <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5">
-            {images.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => emblaApi?.scrollTo(i)}
-                className="rounded-full transition-all"
-                style={{
-                  width: i === selectedIndex ? 20 : 6,
-                  height: 6,
-                  background: i === selectedIndex ? 'white' : 'rgba(255,255,255,0.5)',
-                }}
-              />
-            ))}
+          <div
+            className="absolute text-[11px] font-medium"
+            style={{
+              right: 14,
+              bottom: 26,
+              padding: '5px 10px',
+              borderRadius: 'var(--r-full)',
+              background: 'rgba(0,0,0,0.55)',
+              border: '1px solid var(--border-strong)',
+              color: 'var(--text)',
+              backdropFilter: 'blur(8px)',
+            }}
+          >
+            {selectedIndex + 1}/{images.length}
           </div>
         )}
-
       </div>
 
-      {/* ── Lightbox ── */}
       {lightboxIndex !== null && (
         <Lightbox
           images={images}

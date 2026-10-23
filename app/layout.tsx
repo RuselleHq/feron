@@ -1,11 +1,22 @@
 import type { Metadata, Viewport } from 'next'
-import { Inter } from 'next/font/google'
+import { Inter, Cormorant_Garamond } from 'next/font/google'
 import './globals.css'
 import { LangProvider } from '@/contexts/lang-context'
 import { FavoritesProvider } from '@/contexts/favorites-context'
 import { BottomNav } from '@/components/layout/bottom-nav'
 
-const inter = Inter({ subsets: ['latin', 'cyrillic'], display: 'swap' })
+const inter = Inter({
+  subsets: ['latin', 'cyrillic'],
+  display: 'swap',
+  variable: '--font-sans',
+})
+
+const display = Cormorant_Garamond({
+  subsets: ['latin'],
+  weight: ['300', '400', '500'],
+  display: 'swap',
+  variable: '--font-display',
+})
 
 export const metadata: Metadata = {
   title: 'Feron Craft — металлоизделия на заказ, Семей',
@@ -19,19 +30,22 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: 'cover',
-  themeColor: '#ffffff',
+  themeColor: '#0b0b0c',
+  colorScheme: 'dark',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ru">
-      <body className={inter.className}>
+    <html lang="ru" className={`${inter.variable} ${display.variable}`}>
+      <body>
         <LangProvider>
           <FavoritesProvider>
-            <main className="min-h-screen pb-[64px]">
-              {children}
-            </main>
-            <BottomNav />
+            <div className="app-shell">
+              <main style={{ paddingBottom: 'calc(var(--nav-height) + env(safe-area-inset-bottom, 0px) + 16px)' }}>
+                {children}
+              </main>
+              <BottomNav />
+            </div>
           </FavoritesProvider>
         </LangProvider>
       </body>

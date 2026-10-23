@@ -1,17 +1,28 @@
-import type { OrderRequest, Product } from '@/types'
+import type { Product, ProductSize } from '@/types'
+import { contacts } from '@/lib/contacts'
 
-const WHATSAPP_PHONE = process.env.NEXT_PUBLIC_WHATSAPP_PHONE ?? '77771234567'
+export interface WhatsAppOrder {
+  customerName: string
+  sizeType: 'standard' | 'custom'
+  selectedSize?: ProductSize
+  customWidth?: number
+  customHeight?: number
+  comment?: string
+}
 
-export function buildWhatsAppLink(order: OrderRequest, product?: Product): string {
+export function buildWhatsAppLink(order: WhatsAppOrder, product?: Product): string | null {
+  const channel = contacts.whatsapp
+  if (!channel) return null
+
   const sizeInfo =
     order.sizeType === 'standard' && order.selectedSize
       ? `Размер: ${order.selectedSize.label.ru}`
-      : order.customWidth && order.customHeight
+      : order.customWidth !== undefined && order.customHeight !== undefined
         ? `Размер: ${order.customWidth}×${order.customHeight} см`
         : ''
 
   const lines = [
-    `Здравствуйте! Хочу заказать изделие.`,
+    'Здравствуйте! Хочу заказать изделие.',
     product ? `Изделие: ${product.name.ru}` : '',
     `Имя: ${order.customerName}`,
     sizeInfo,
@@ -20,5 +31,5 @@ export function buildWhatsAppLink(order: OrderRequest, product?: Product): strin
     .filter(Boolean)
     .join('\n')
 
-  return `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(lines)}`
+  return `${channel.href}?text=${encodeURIComponent(lines)}`
 }

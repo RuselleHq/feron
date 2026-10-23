@@ -13,6 +13,19 @@ export interface ProductSize {
   priceFrom: number
 }
 
+export type PriceMethod = 'area' | 'length' | 'quote'
+
+export type OptionIcon = 'wicket' | 'automation' | 'coating' | 'decor'
+
+export interface CalculatorOption {
+  id: string
+  name: { ru: string; kz: string }
+  price: number
+  icon: OptionIcon
+  /** Selected by default, matching the reference screen */
+  defaultOn?: boolean
+}
+
 export interface Product {
   id: string
   slug: string
@@ -22,24 +35,9 @@ export interface Product {
   images: string[]
   model3d?: string
   sizes: ProductSize[]
-  pricePerSqM: number
+  priceMethod: PriceMethod
   featured?: boolean
   homeSection?: 'popular' | 'ideas'
   tags?: string[]
 }
 
-export interface OrderRequest {
-  id: string
-  productId?: string
-  productName?: string
-  customerName: string
-  phone: string
-  sizeType: 'standard' | 'custom'
-  selectedSize?: ProductSize
-  customWidth?: number
-  customHeight?: number
-  comment?: string
-  fileUrl?: string
-  fileName?: string
-  createdAt: string
-}

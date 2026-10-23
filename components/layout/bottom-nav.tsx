@@ -2,98 +2,78 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Grid3x3, Heart, User, Plus } from 'lucide-react'
-import { useLang } from '@/contexts/lang-context'
-import { useFavorites } from '@/contexts/favorites-context'
-import { cn } from '@/lib/utils'
+import { Home, LayoutGrid, Heart, User, Plus } from 'lucide-react'
 import { useState } from 'react'
+import { useLang } from '@/contexts/lang-context'
 import { OrderSheet } from '@/components/order/order-sheet'
-
-const navItems = [
-  { href: '/', icon: Home, labelKey: 'home' as const },
-  { href: '/catalog', icon: Grid3x3, labelKey: 'catalog' as const },
-  { href: '/favorites', icon: Heart, labelKey: 'favorites' as const },
-  { href: '/profile', icon: User, labelKey: 'profile' as const },
-]
 
 export function BottomNav() {
   const pathname = usePathname()
   const { tr } = useLang()
-  const { count } = useFavorites()
   const [orderOpen, setOrderOpen] = useState(false)
 
-  // Hide on product detail pages — order button takes its place
-  const isProductPage = /^\/catalog\/.+/.test(pathname)
-  if (isProductPage) return null
+  // Product detail keeps its own action bar instead of the tab bar
+  if (/^\/catalog\/.+/.test(pathname)) return null
 
   return (
     <>
       <nav
-        className="fixed bottom-0 left-0 right-0 z-50"
-        style={{ paddingBottom: 'calc(10px + env(safe-area-inset-bottom, 0px))', paddingLeft: 12, paddingRight: 12 }}
+        className="fixed bottom-0 left-1/2 z-50 w-full"
+        style={{
+          maxWidth: 'var(--shell-max)',
+          transform: 'translateX(-50%)',
+          background: 'var(--surface)',
+          borderTop: '1px solid var(--border)',
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        }}
       >
-        <div
-          className="flex items-center h-16 px-2"
-          style={{
-            background: 'var(--color-surface)',
-            borderRadius: 20,
-            border: '1px solid var(--color-border)',
-            boxShadow: '0 4px 24px rgba(0,0,0,0.10)',
-          }}
-        >
-          {/* Home */}
-          <NavItem href="/" icon={Home} label={tr.nav.home} active={pathname === '/'} />
+        <div className="relative flex items-end" style={{ height: 'var(--nav-height)' }}>
+          <NavItem
+            href="/"
+            icon={Home}
+            label={tr.nav.home}
+            active={pathname === '/'}
+          />
+          <NavItem
+            href="/catalog"
+            icon={LayoutGrid}
+            label={tr.nav.catalog}
+            active={pathname.startsWith('/catalog')}
+          />
 
-          {/* Catalog */}
-          <NavItem href="/catalog" icon={Grid3x3} label={tr.nav.catalog} active={pathname.startsWith('/catalog')} />
-
-          {/* Center CTA */}
+          {/* Center action */}
           <div className="flex-1 flex justify-center">
             <button
               onClick={() => setOrderOpen(true)}
-              className="flex flex-col items-center justify-center w-14 h-14 rounded-full transition-transform active:scale-95"
-              style={{ background: 'var(--color-steel)' }}
               aria-label={tr.nav.order}
+              className="press flex items-center justify-center"
+              style={{
+                width: 54,
+                height: 54,
+                borderRadius: 'var(--r-full)',
+                background: 'var(--gold)',
+                marginBottom: 14,
+                boxShadow: '0 8px 20px rgba(201,151,74,0.32)',
+              }}
             >
-              <Plus size={22} color="white" strokeWidth={2.5} />
+              <Plus size={24} color="#1a1205" strokeWidth={2.6} />
             </button>
           </div>
 
-          {/* Favorites */}
-          <div className="flex-1 flex justify-center">
-            <Link
-              href="/favorites"
-              className="flex flex-col items-center gap-1 py-2 px-3 rounded-xl transition-colors"
-            >
-              <div className="relative">
-                <Heart
-                  size={22}
-                  strokeWidth={1.8}
-                  style={{
-                    color: pathname === '/favorites' ? 'var(--color-steel)' : 'var(--color-text-muted)',
-                    fill: pathname === '/favorites' ? 'var(--color-steel)' : 'none',
-                  }}
-                />
-                {count > 0 && (
-                  <span
-                    className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-[10px] font-semibold flex items-center justify-center text-white"
-                    style={{ background: 'var(--color-gold)' }}
-                  >
-                    {count > 9 ? '9+' : count}
-                  </span>
-                )}
-              </div>
-              <span
-                className="text-[10px] font-medium"
-                style={{ color: pathname === '/favorites' ? 'var(--color-steel)' : 'var(--color-text-muted)' }}
-              >
-                {tr.nav.favorites}
-              </span>
-            </Link>
-          </div>
-
-          {/* Profile */}
-          <NavItem href="/profile" icon={User} label={tr.nav.profile} active={pathname === '/profile'} />
+          <NavItem
+            href="/favorites"
+            icon={Heart}
+            label={tr.nav.favorites}
+            active={pathname === '/favorites'}
+            fillWhenActive
+          />
+          <NavItem
+            href="/profile"
+            icon={User}
+            label={tr.nav.profile}
+            active={pathname === '/profile'}
+            fillWhenActive
+          />
         </div>
       </nav>
 
@@ -107,29 +87,30 @@ function NavItem({
   icon: Icon,
   label,
   active,
+  fillWhenActive = false,
 }: {
   href: string
   icon: React.ElementType
   label: string
   active: boolean
+  fillWhenActive?: boolean
 }) {
+  const color = active ? 'var(--gold)' : 'var(--text-3)'
+
   return (
     <div className="flex-1 flex justify-center">
       <Link
         href={href}
-        className="flex flex-col items-center gap-1 py-2 px-3 rounded-xl transition-colors"
+        className="flex flex-col items-center gap-[5px] pb-3 pt-2 px-2"
+        style={{ color }}
       >
         <Icon
-          size={22}
-          strokeWidth={1.8}
-          style={{
-            color: active ? 'var(--color-steel)' : 'var(--color-text-muted)',
-          }}
+          size={21}
+          strokeWidth={active ? 2 : 1.7}
+          color={color}
+          fill={active && fillWhenActive ? 'var(--gold)' : 'none'}
         />
-        <span
-          className="text-[10px] font-medium"
-          style={{ color: active ? 'var(--color-steel)' : 'var(--color-text-muted)' }}
-        >
+        <span className="text-[10px] font-medium" style={{ color }}>
           {label}
         </span>
       </Link>

@@ -3,363 +3,527 @@
 import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import { X, Upload, CheckCircle2, Send, MessageCircle, Phone } from 'lucide-react'
+import {
+  X, CheckCircle2, Send, Phone, AlertCircle, User, PhoneCall, ChevronDown, FileUp,
+} from 'lucide-react'
 import type { Product, ProductSize } from '@/types'
 import { useLang } from '@/contexts/lang-context'
-import { sendOrderToTelegram } from '@/lib/telegram'
+import { contacts } from '@/lib/contacts'
+import {
+  ACCEPTED_FILE_EXTENSIONS,
+  buildOrderSchema,
+  isFileAllowed,
+  type OrderErrorCode,
+  type OrderFormData,
+  type OrderResponse,
+} from '@/lib/order'
 import { buildWhatsAppLink } from '@/lib/whatsapp'
+import { Segmented } from '@/components/ui/segmented'
 import { cn, formatPrice } from '@/lib/utils'
 
 interface OrderSheetProps {
   open: boolean
   onClose: () => void
   product?: Product
+  initialSizeIndex?: number
 }
 
 type SizeType = 'standard' | 'custom'
+type Status = 'idle' | 'sending' | 'success' | 'error'
 
-function buildSchema(tr: ReturnType<typeof useLang>['tr']) {
-  return z.object({
-    customerName: z.string().min(1, tr.order.validation.nameRequired),
-    phone: z.string().min(10, tr.order.validation.phoneRequired),
-    sizeType: z.enum(['standard', 'custom']),
-    selectedSizeIndex: z.string().optional(),
-    customWidth: z.string().optional(),
-    customHeight: z.string().optional(),
-    comment: z.string().optional(),
-  })
+function newRequestId(): string {
+  try {
+    return crypto.randomUUID()
+  } catch {
+    return `${Date.now()}-${Math.random().toString(36).slice(2)}`
+  }
 }
 
-type FormData = z.infer<ReturnType<typeof buildSchema>>
-
-export function OrderSheet({ open, onClose, product }: OrderSheetProps) {
-  const { tr } = useLang()
-  const [success, setSuccess] = useState(false)
-  const [fileName, setFileName] = useState<string>()
+export function OrderSheet({ open, onClose, product, initialSizeIndex }: OrderSheetProps) {
+  const { tr, lang } = useLang()
+  const [status, setStatus] = useState<Status>('idle')
+  const [errorCode, setErrorCode] = useState<OrderErrorCode>()
+  const [file, setFile] = useState<File>()
+  const [fileError, setFileError] = useState<string>()
   const fileRef = useRef<HTMLInputElement>(null)
-  const sheetRef = useRef<HTMLDivElement>(null)
+  const requestIdRef = useRef(newRequestId())
 
-  const schema = buildSchema(tr)
+  const schema = buildOrderSchema(tr.order.validation, { sizeCount: product?.sizes.length ?? 0 })
 
-  const { register, handleSubmit, watch, reset, formState: { errors, isSubmitting } } = useForm<FormData>({
+  const { register, handleSubmit, watch, reset, setValue, formState: { errors } } = useForm<OrderFormData>({
     resolver: zodResolver(schema),
     defaultValues: { sizeType: 'standard' },
   })
 
   const sizeType = watch('sizeType') as SizeType
-  const selectedSizeIndex = watch('selectedSizeIndex')
 
   useEffect(() => {
-    if (!open) { reset(); setSuccess(false); setFileName(undefined) }
-  }, [open, reset])
+    if (!open) {
+      reset()
+      setStatus('idle')
+      setErrorCode(undefined)
+      setFile(undefined)
+      setFileError(undefined)
+      if (fileRef.current) fileRef.current.value = ''
+      requestIdRef.current = newRequestId()
+      return
+    }
+    if (initialSizeIndex !== undefined) {
+      setValue('selectedSizeIndex', String(initialSizeIndex))
+    }
+  }, [open, reset, setValue, initialSizeIndex])
 
-  // Close on backdrop click
+  useEffect(() => {
+    if (!open) return
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = '' }
+  }, [open])
+
   function handleBackdrop(e: React.MouseEvent) {
     if (e.target === e.currentTarget) onClose()
   }
 
-  async function onSubmit(data: FormData) {
-    const selectedSize: ProductSize | undefined =
-      sizeType === 'standard' && data.selectedSizeIndex !== undefined && product
-        ? product.sizes[Number(data.selectedSizeIndex)]
-        : undefined
-
-    const order = {
-      id: Date.now().toString(),
-      productId: product?.id,
-      productName: product?.name.ru,
-      customerName: data.customerName,
-      phone: data.phone,
-      sizeType,
-      selectedSize,
-      customWidth: data.customWidth ? Number(data.customWidth) : undefined,
-      customHeight: data.customHeight ? Number(data.customHeight) : undefined,
-      comment: data.comment,
-      fileName,
-      createdAt: new Date().toISOString(),
-    }
-
-    await sendOrderToTelegram(order, product)
-    setSuccess(true)
+  function resolveSelectedSize(data: OrderFormData): ProductSize | undefined {
+    if (data.sizeType !== 'standard' || !product) return undefined
+    const index = Number(data.selectedSizeIndex)
+    return Number.isInteger(index) ? product.sizes[index] : undefined
   }
 
-  function handleWhatsApp(data: FormData) {
-    const selectedSize: ProductSize | undefined =
-      sizeType === 'standard' && data.selectedSizeIndex !== undefined && product
-        ? product.sizes[Number(data.selectedSizeIndex)]
-        : undefined
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const picked = e.target.files?.[0]
+    setFileError(undefined)
 
-    const order = {
-      id: Date.now().toString(),
-      productId: product?.id,
-      productName: product?.name.ru,
-      customerName: data.customerName,
-      phone: data.phone,
-      sizeType,
-      selectedSize,
-      customWidth: data.customWidth ? Number(data.customWidth) : undefined,
-      customHeight: data.customHeight ? Number(data.customHeight) : undefined,
-      comment: data.comment,
-      fileName,
-      createdAt: new Date().toISOString(),
+    if (!picked) {
+      setFile(undefined)
+      return
     }
 
-    const link = buildWhatsAppLink(order, product)
-    window.open(link, '_blank')
+    const verdict = isFileAllowed(picked)
+    if (verdict !== 'ok') {
+      setFile(undefined)
+      e.target.value = ''
+      setFileError(verdict === 'too-large' ? tr.order.fileErrors.tooLarge : tr.order.fileErrors.wrongType)
+      return
+    }
+
+    setFile(picked)
+  }
+
+  async function onSubmit(data: OrderFormData) {
+    if (status === 'sending') return
+
+    setStatus('sending')
+    setErrorCode(undefined)
+
+    const body = new FormData()
+    body.append('requestId', requestIdRef.current)
+    body.append('customerName', data.customerName)
+    body.append('phone', data.phone)
+    body.append('sizeType', data.sizeType)
+    if (product) body.append('productId', product.id)
+    if (data.selectedSizeIndex) body.append('selectedSizeIndex', data.selectedSizeIndex)
+    if (data.customWidth) body.append('customWidth', data.customWidth)
+    if (data.customHeight) body.append('customHeight', data.customHeight)
+    if (data.comment) body.append('comment', data.comment)
+    if (file) body.append('file', file)
+
+    try {
+      const res = await fetch('/api/order', { method: 'POST', body })
+      const payload = (await res.json().catch(() => null)) as OrderResponse | null
+
+      if (res.ok && payload?.ok) {
+        setStatus('success')
+        return
+      }
+
+      setErrorCode(payload && !payload.ok ? payload.code : 'telegram')
+      setStatus('error')
+    } catch {
+      setErrorCode('network')
+      setStatus('error')
+    }
+  }
+
+  function handleWhatsApp(data: OrderFormData) {
+    const link = buildWhatsAppLink(
+      {
+        customerName: data.customerName,
+        sizeType: data.sizeType,
+        selectedSize: resolveSelectedSize(data),
+        customWidth: data.customWidth ? Number(data.customWidth) : undefined,
+        customHeight: data.customHeight ? Number(data.customHeight) : undefined,
+        comment: data.comment,
+      },
+      product,
+    )
+
+    if (link) window.open(link, '_blank')
   }
 
   if (!open) return null
 
+  const sending = status === 'sending'
+  const errorMessage = errorCode ? errorMessageFor(tr.order.errors, errorCode) : undefined
+
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-end backdrop"
-      style={{ background: 'rgba(0,0,0,0.4)' }}
+      className="fixed inset-0 z-[150] flex items-end justify-center backdrop"
+      style={{ background: 'rgba(0,0,0,0.6)' }}
       onClick={handleBackdrop}
     >
       <div
-        ref={sheetRef}
-        className="w-full rounded-t-3xl overflow-hidden"
-        style={{ background: 'var(--color-surface)', maxHeight: '92dvh', overflowY: 'auto' }}
+        className="w-full sheet-enter"
+        style={{
+          maxWidth: 'var(--shell-max)',
+          background: 'var(--surface)',
+          borderTopLeftRadius: 26,
+          borderTopRightRadius: 26,
+          border: '1px solid var(--border)',
+          borderBottom: 'none',
+          maxHeight: '94dvh',
+          overflowY: 'auto',
+        }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Handle */}
         <div className="flex justify-center pt-3 pb-1">
-          <div className="w-10 h-1 rounded-full" style={{ background: 'var(--color-border)' }} />
+          <div style={{ width: 38, height: 4, borderRadius: 999, background: 'var(--surface-3)' }} />
         </div>
 
-        <div className="px-5 pb-6">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-5">
-            <div>
-              <h2 className="text-[18px] font-bold" style={{ color: 'var(--color-text)' }}>
-                {tr.order.title}
-              </h2>
-              <p className="text-[13px]" style={{ color: 'var(--color-text-secondary)' }}>
-                {tr.order.subtitle}
-              </p>
-            </div>
+        <div className="px-5 pb-6" style={{ paddingBottom: 'calc(24px + env(safe-area-inset-bottom, 0px))' }}>
+          <div className="flex items-center justify-between mb-4 pt-1">
+            <h2 className="text-[17px] font-bold" style={{ color: 'var(--text)' }}>
+              {tr.order.title}
+            </h2>
             <button
               onClick={onClose}
-              className="w-8 h-8 rounded-full flex items-center justify-center transition-colors active:opacity-60"
-              style={{ background: 'var(--color-bg-muted)' }}
+              aria-label={tr.common.close}
+              className="press flex items-center justify-center"
+              style={{ width: 30, height: 30, borderRadius: 'var(--r-full)', background: 'var(--surface-2)' }}
             >
-              <X size={16} style={{ color: 'var(--color-text-secondary)' }} />
+              <X size={15} color="var(--text-2)" />
             </button>
           </div>
 
-          {success ? (
+          {status === 'success' ? (
             <div className="flex flex-col items-center py-10 gap-3">
-              <CheckCircle2 size={52} style={{ color: 'var(--color-success)' }} />
-              <p className="text-[18px] font-bold text-center" style={{ color: 'var(--color-text)' }}>
+              <CheckCircle2 size={50} style={{ color: 'var(--success)' }} />
+              <p className="text-[18px] font-bold text-center" style={{ color: 'var(--text)' }}>
                 {tr.order.success}
               </p>
-              <p className="text-[14px] text-center" style={{ color: 'var(--color-text-secondary)' }}>
+              <p className="text-[13.5px] text-center" style={{ color: 'var(--text-2)' }}>
                 {tr.order.successDesc}
               </p>
-              <a
-                href={`tel:${process.env.NEXT_PUBLIC_PHONE ?? '+77771234567'}`}
-                className="mt-4 flex items-center gap-2 px-5 py-3 rounded-xl text-[14px] font-semibold"
-                style={{ background: 'var(--color-bg-muted)', color: 'var(--color-text)' }}
-              >
-                <Phone size={16} />
-                {tr.product.callButton}
-              </a>
+              {contacts.phone && (
+                <a
+                  href={contacts.phone.href}
+                  className="press mt-4 flex items-center gap-2 px-5 text-[14px] font-semibold"
+                  style={{
+                    height: 46,
+                    borderRadius: 'var(--r-full)',
+                    background: 'var(--surface-2)',
+                    border: '1px solid var(--border-strong)',
+                    color: 'var(--text)',
+                  }}
+                >
+                  <Phone size={15} />
+                  {tr.product.callButton}
+                </a>
+              )}
             </div>
           ) : (
             <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
-              {product && (
-                <div
-                  className="px-3 py-2 rounded-xl text-[13px] font-medium"
-                  style={{ background: 'var(--color-bg-subtle)', color: 'var(--color-text-secondary)' }}
-                >
-                  {product.name.ru}
-                </div>
-              )}
+              <Segmented
+                options={[
+                  { id: 'standard', label: tr.order.standard },
+                  { id: 'custom', label: tr.order.custom },
+                ]}
+                value={sizeType}
+                onChange={(v) => setValue('sizeType', v as SizeType, { shouldValidate: false })}
+              />
 
-              {/* Name */}
-              <Field label={tr.order.name} error={errors.customerName?.message}>
-                <input
-                  {...register('customerName')}
-                  placeholder={tr.order.namePlaceholder}
-                  className="input-base"
-                />
-              </Field>
-
-              {/* Phone */}
-              <Field label={tr.order.phone} error={errors.phone?.message}>
-                <input
-                  {...register('phone')}
-                  type="tel"
-                  placeholder={tr.order.phonePlaceholder}
-                  className="input-base"
-                />
-              </Field>
-
-              {/* Size type */}
               <div>
-                <p className="text-[13px] font-medium mb-2" style={{ color: 'var(--color-text-secondary)' }}>
-                  {tr.order.sizeType}
-                </p>
-                <div className="flex gap-2">
-                  {(['standard', 'custom'] as const).map((type) => (
-                    <label
-                      key={type}
-                      className={cn(
-                        'flex-1 flex items-center justify-center py-2.5 rounded-xl border text-[13px] font-medium cursor-pointer transition-all',
-                        sizeType === type ? 'border-[--color-steel] bg-[--color-steel] text-white' : ''
-                      )}
-                      style={
-                        sizeType !== type
-                          ? { borderColor: 'var(--color-border)', color: 'var(--color-text-secondary)' }
-                          : {}
-                      }
-                    >
-                      <input {...register('sizeType')} type="radio" value={type} className="sr-only" />
-                      {type === 'standard' ? tr.order.standard : tr.order.custom}
-                    </label>
-                  ))}
+                <SectionLabel>{tr.order.yourData}</SectionLabel>
+                <div className="flex flex-col gap-2.5">
+                  <IconField icon={<User size={15} color="var(--text-3)" />} error={errors.customerName?.message}>
+                    <input
+                      {...register('customerName')}
+                      placeholder={tr.order.namePlaceholder}
+                      autoComplete="name"
+                      className="field field-with-icon"
+                    />
+                  </IconField>
+                  <IconField icon={<PhoneCall size={15} color="var(--text-3)" />} error={errors.phone?.message}>
+                    <input
+                      {...register('phone')}
+                      type="tel"
+                      inputMode="tel"
+                      autoComplete="tel"
+                      placeholder={tr.order.phonePlaceholder}
+                      className="field field-with-icon"
+                    />
+                  </IconField>
                 </div>
               </div>
 
-              {/* Standard size selector */}
-              {sizeType === 'standard' && product && product.sizes.length > 0 && (
-                <Field label={tr.order.selectSize}>
-                  <select {...register('selectedSizeIndex')} className="input-base">
-                    <option value="">— {tr.order.selectSize} —</option>
-                    {product.sizes.map((s, i) => (
-                      <option key={i} value={i}>
-                        {s.label.ru} — {formatPrice(s.priceFrom)}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-              )}
-
-              {/* Custom size */}
-              {sizeType === 'custom' && (
-                <div className="flex gap-3">
-                  <Field label={tr.order.widthCm} className="flex-1">
-                    <input {...register('customWidth')} type="number" min={1} className="input-base" />
-                  </Field>
-                  <Field label={tr.order.heightCm} className="flex-1">
-                    <input {...register('customHeight')} type="number" min={1} className="input-base" />
-                  </Field>
+              {product && (
+                <div>
+                  <SectionLabel>{tr.order.interest}</SectionLabel>
+                  <div
+                    className="flex items-center justify-between px-3.5 text-[13.5px]"
+                    style={{
+                      height: 48,
+                      borderRadius: 'var(--r-sm)',
+                      background: 'var(--surface-2)',
+                      border: '1px solid var(--border)',
+                      color: 'var(--text)',
+                    }}
+                  >
+                    <span className="truncate">{product.name[lang]}</span>
+                    <ChevronDown size={15} color="var(--text-3)" className="flex-shrink-0" />
+                  </div>
                 </div>
               )}
 
-              {/* File upload */}
+              {sizeType === 'standard' && product && product.sizes.length > 0 && (
+                <div>
+                  <SectionLabel>{tr.order.size}</SectionLabel>
+                  <div className="relative">
+                    <select {...register('selectedSizeIndex')} className="field" style={{ height: 48, paddingBlock: 0 }}>
+                      <option value="">— {tr.order.selectSize} —</option>
+                      {product.sizes.map((s, i) => (
+                        <option key={i} value={i}>
+                          {s.label[lang]} — {formatPrice(s.priceFrom)}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown
+                      size={15}
+                      color="var(--text-3)"
+                      className="absolute pointer-events-none"
+                      style={{ right: 14, top: '50%', transform: 'translateY(-50%)' }}
+                    />
+                  </div>
+                  <FieldError message={errors.selectedSizeIndex?.message} />
+                </div>
+              )}
+
               {sizeType === 'custom' && (
                 <div>
+                  <SectionLabel>{tr.order.size}</SectionLabel>
+                  <div className="flex gap-2.5">
+                    <div className="flex-1">
+                      <input
+                        {...register('customWidth')}
+                        type="number"
+                        min={10}
+                        max={3000}
+                        step={1}
+                        placeholder={tr.order.widthCm}
+                        className="field"
+                      />
+                      <FieldError message={errors.customWidth?.message} />
+                    </div>
+                    <div className="flex-1">
+                      <input
+                        {...register('customHeight')}
+                        type="number"
+                        min={10}
+                        max={3000}
+                        step={1}
+                        placeholder={tr.order.heightCm}
+                        className="field"
+                      />
+                      <FieldError message={errors.customHeight?.message} />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <SectionLabel>{tr.order.comment}</SectionLabel>
+                <textarea
+                  {...register('comment')}
+                  placeholder={tr.order.commentPlaceholder}
+                  rows={3}
+                  className="field resize-none"
+                />
+                <FieldError message={errors.comment?.message} />
+              </div>
+
+              <div>
                   <button
                     type="button"
                     onClick={() => fileRef.current?.click()}
-                    className="w-full flex items-center gap-2 px-4 py-3 rounded-xl border border-dashed text-[13px] transition-colors active:opacity-70"
-                    style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-secondary)' }}
+                    className="press w-full flex items-center gap-3 px-3.5 text-left"
+                    style={{
+                      height: 60,
+                      borderRadius: 'var(--r-sm)',
+                      background: 'var(--surface-2)',
+                      border: '1px dashed var(--border-strong)',
+                    }}
                   >
-                    <Upload size={16} />
-                    {fileName ?? tr.order.uploadFile}
-                    <span className="ml-auto text-[11px]" style={{ color: 'var(--color-text-muted)' }}>
-                      {tr.order.uploadHint}
+                    <span
+                      className="flex items-center justify-center flex-shrink-0"
+                      style={{ width: 32, height: 32, borderRadius: 'var(--r-xs)', background: 'var(--surface-3)' }}
+                    >
+                      <FileUp size={15} color="var(--text-2)" />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block text-[13px] font-medium truncate" style={{ color: 'var(--text)' }}>
+                        {file?.name ?? tr.order.uploadFile}
+                      </span>
+                      <span className="block text-[11px]" style={{ color: 'var(--text-3)' }}>
+                        {tr.order.uploadHint}
+                      </span>
                     </span>
                   </button>
                   <input
                     ref={fileRef}
                     type="file"
-                    accept="image/*,.pdf"
+                    accept={ACCEPTED_FILE_EXTENSIONS}
                     className="sr-only"
-                    onChange={(e) => setFileName(e.target.files?.[0]?.name)}
+                    onChange={handleFileChange}
                   />
+                  {file && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFile(undefined)
+                        setFileError(undefined)
+                        if (fileRef.current) fileRef.current.value = ''
+                      }}
+                      className="mt-1.5 text-[11px] font-medium"
+                      style={{ color: 'var(--text-3)' }}
+                    >
+                      {tr.order.uploadRemove}
+                    </button>
+                  )}
+                  <FieldError message={fileError} />
+              </div>
+
+              {errorMessage && (
+                <div
+                  className="flex items-start gap-2 px-3 py-2.5 text-[12px] leading-snug"
+                  style={{ background: 'rgba(229,72,77,0.1)', borderRadius: 'var(--r-xs)', color: '#ff8b8e' }}
+                  role="alert"
+                >
+                  <AlertCircle size={14} className="flex-shrink-0 mt-0.5" />
+                  <span>{errorMessage}</span>
                 </div>
               )}
 
-              {/* Comment */}
-              <Field label={tr.order.comment}>
-                <textarea
-                  {...register('comment')}
-                  placeholder={tr.order.commentPlaceholder}
-                  rows={3}
-                  className="input-base resize-none"
-                />
-              </Field>
-
-              {/* Submit buttons */}
-              <div className="flex flex-col gap-2 pt-1">
+              <div className="flex flex-col gap-2.5 pt-0.5">
                 <button
                   type="submit"
-                  disabled={isSubmitting}
-                  className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl text-[15px] font-semibold text-white transition-opacity active:opacity-80 disabled:opacity-50"
-                  style={{ background: 'var(--color-steel)' }}
+                  disabled={sending}
+                  className="press flex items-center justify-center gap-2 w-full text-[14.5px] font-semibold disabled:opacity-50"
+                  style={{
+                    height: 52,
+                    borderRadius: 'var(--r-full)',
+                    background: 'var(--telegram)',
+                    border: '1px solid rgba(255,255,255,0.09)',
+                    color: '#fff',
+                  }}
                 >
                   <Send size={16} />
-                  {tr.order.sendTelegram}
+                  {sending ? tr.order.sending : status === 'error' ? tr.order.retry : tr.order.sendTelegram}
                 </button>
 
-                <button
-                  type="button"
-                  onClick={handleSubmit(handleWhatsApp)}
-                  className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl text-[15px] font-semibold transition-opacity active:opacity-80"
-                  style={{ background: '#25D366', color: 'white' }}
-                >
-                  <MessageCircle size={16} />
-                  {tr.order.sendWhatsApp}
-                </button>
+                {contacts.whatsapp && (
+                  <>
+                    <button
+                      type="button"
+                      disabled={sending}
+                      onClick={handleSubmit(handleWhatsApp)}
+                      className="press flex items-center justify-center gap-2 w-full text-[14.5px] font-semibold disabled:opacity-50"
+                      style={{
+                        height: 52,
+                        borderRadius: 'var(--r-full)',
+                        background: 'var(--whatsapp)',
+                        color: '#06301a',
+                      }}
+                    >
+                      <WhatsAppGlyph />
+                      {tr.order.sendWhatsApp}
+                    </button>
+                    {file && (
+                      <p className="text-[11px] leading-snug" style={{ color: 'var(--text-3)' }}>
+                        {tr.order.whatsappFileNote}
+                      </p>
+                    )}
+                  </>
+                )}
               </div>
             </form>
           )}
         </div>
       </div>
-
-      <style>{`
-        .input-base {
-          width: 100%;
-          padding: 12px 14px;
-          border-radius: 12px;
-          border: 1px solid var(--color-border);
-          background: var(--color-bg-subtle);
-          color: var(--color-text);
-          font-size: 14px;
-          outline: none;
-          transition: border-color 0.15s;
-          font-family: inherit;
-        }
-        .input-base:focus {
-          border-color: var(--color-steel);
-        }
-        .input-base::placeholder {
-          color: var(--color-text-muted);
-        }
-        select.input-base {
-          appearance: none;
-          cursor: pointer;
-        }
-      `}</style>
     </div>
   )
 }
 
-function Field({
-  label,
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="text-[12.5px] font-medium mb-2" style={{ color: 'var(--text-2)' }}>
+      {children}
+    </p>
+  )
+}
+
+function FieldError({ message }: { message?: string }) {
+  if (!message) return null
+  return (
+    <p className="text-[11.5px] mt-1.5" style={{ color: '#ff8b8e' }}>
+      {message}
+    </p>
+  )
+}
+
+function IconField({
+  icon,
   error,
   children,
   className,
 }: {
-  label: string
+  icon: React.ReactNode
   error?: string
   children: React.ReactNode
   className?: string
 }) {
   return (
-    <div className={cn('flex flex-col gap-1.5', className)}>
-      <label className="text-[13px] font-medium" style={{ color: 'var(--color-text-secondary)' }}>
-        {label}
-      </label>
-      {children}
-      {error && (
-        <p className="text-[12px]" style={{ color: 'var(--color-error)' }}>
-          {error}
-        </p>
-      )}
+    <div className={cn('w-full', className)}>
+      <div className="relative">
+        <span className="absolute pointer-events-none" style={{ left: 15, top: '50%', transform: 'translateY(-50%)' }}>
+          {icon}
+        </span>
+        {children}
+      </div>
+      <FieldError message={error} />
     </div>
   )
+}
+
+function WhatsAppGlyph() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.87 9.87 0 0 0 4.74 1.21h.01c5.46 0 9.9-4.45 9.9-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2Zm0 18.15h-.01a8.2 8.2 0 0 1-4.19-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.2 8.2 0 0 1-1.26-4.38c0-4.54 3.7-8.23 8.25-8.23a8.19 8.19 0 0 1 8.24 8.24c0 4.54-3.7 8.23-8.24 8.23Zm4.52-6.16c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.13-.16.24-.64.8-.78.97-.15.16-.29.18-.53.06-.25-.12-1.05-.39-1.99-1.23-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.01-.38.11-.5.11-.11.25-.29.37-.43.13-.15.17-.25.25-.41.08-.17.04-.31-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.43.06-.66.31-.22.25-.86.85-.86 2.07 0 1.22.89 2.4 1.01 2.56.12.17 1.75 2.67 4.23 3.74.59.26 1.05.41 1.41.52.59.19 1.13.16 1.56.1.47-.07 1.47-.6 1.67-1.18.21-.58.21-1.07.15-1.18-.06-.1-.22-.16-.47-.28Z" />
+    </svg>
+  )
+}
+
+function errorMessageFor(messages: ReturnType<typeof useLang>['tr']['order']['errors'], code: OrderErrorCode): string {
+  switch (code) {
+    case 'validation':
+      return messages.validation
+    case 'file':
+      return messages.file
+    case 'rate-limited':
+      return messages.rateLimited
+    case 'not-configured':
+      return messages.notConfigured
+    case 'network':
+      return messages.network
+    default:
+      return messages.telegram
+  }
 }

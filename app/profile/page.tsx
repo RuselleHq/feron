@@ -1,167 +1,169 @@
 'use client'
 
-import type { ReactNode } from 'react'
-import { TopBar } from '@/components/layout/top-bar'
+import { useState, type ReactNode } from 'react'
+import Link from 'next/link'
+import {
+  ChevronRight, Package, Heart, Store, HelpCircle, MessageSquare, ShieldCheck, ArrowRight,
+} from 'lucide-react'
 import { useLang } from '@/contexts/lang-context'
-import { Phone, MessageCircle, MapPin, Clock } from 'lucide-react'
+import { useFavorites } from '@/contexts/favorites-context'
 import { IconForge } from '@/components/ui/icons'
+import { OrderSheet } from '@/components/order/order-sheet'
+import { AboutWorkshop } from '@/components/profile/about-workshop'
 
 export default function ProfilePage() {
-  const { tr } = useLang()
-
-  const phone = process.env.NEXT_PUBLIC_PHONE ?? '+77771234567'
-  const wa = process.env.NEXT_PUBLIC_WHATSAPP_PHONE ?? '77771234567'
+  const { tr, lang, setLang } = useLang()
+  const { count } = useFavorites()
+  const [aboutOpen, setAboutOpen] = useState(false)
+  const [orderOpen, setOrderOpen] = useState(false)
 
   return (
-    <div className="min-h-screen page-enter" style={{ background: 'var(--color-bg)' }}>
-      <TopBar title={tr.profile.title} />
-
-      <div className="px-4 pt-4 pb-10 flex flex-col gap-4">
-        {/* About */}
+    <div className="page-enter min-h-screen" style={{ background: 'var(--bg)' }}>
+      {/* Identity */}
+      <div
+        className="flex items-center gap-3 px-4"
+        style={{ paddingTop: 'calc(18px + env(safe-area-inset-top, 0px))', paddingBottom: 18 }}
+      >
         <div
-          className="rounded-xl p-4"
-          style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-sm)' }}
+          className="flex items-center justify-center flex-shrink-0"
+          style={{ width: 52, height: 52, borderRadius: 'var(--r-full)', background: 'var(--surface-2)', border: '1px solid var(--border)' }}
         >
-          <div className="flex items-center gap-3 mb-3">
-            <div
-              className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
-              style={{ background: 'var(--color-steel)' }}
-            >
-              <IconForge size={26} color="white" strokeWidth={1.5} />
-            </div>
-            <div>
-              <p className="text-[15px] font-bold" style={{ color: 'var(--color-text)' }}>
-                Feron Craft
-              </p>
-              <p className="text-[12px]" style={{ color: 'var(--color-gold)' }}>
-                Семей, Казахстан
-              </p>
-            </div>
-          </div>
-          <p className="text-[13px] leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
-            {tr.profile.about}
+          <IconForge size={25} color="var(--gold)" strokeWidth={1.5} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-[17px] font-bold" style={{ color: 'var(--text)' }}>
+            Feron Craft
+          </p>
+          <p className="text-[12.5px]" style={{ color: 'var(--text-2)' }}>
+            {tr.profile.city}
           </p>
         </div>
-
-        {/* Contacts */}
-        <div
-          className="rounded-xl overflow-hidden"
-          style={{ border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-sm)' }}
+        <button
+          onClick={() => setLang(lang === 'ru' ? 'kz' : 'ru')}
+          className="press flex items-center justify-center text-[11px] font-semibold flex-shrink-0"
+          style={{
+            height: 30,
+            paddingInline: 11,
+            borderRadius: 'var(--r-full)',
+            background: 'var(--surface-2)',
+            border: '1px solid var(--border)',
+            color: 'var(--text-2)',
+          }}
         >
-          <p
-            className="px-4 py-3 text-[12px] font-semibold uppercase tracking-wider"
-            style={{ background: 'var(--color-bg-subtle)', color: 'var(--color-text-muted)' }}
-          >
-            {tr.profile.contacts}
-          </p>
-
-          <ContactRow
-            icon={<Phone size={16} />}
-            label={tr.profile.phone}
-            value={phone}
-            href={`tel:${phone}`}
-          />
-          <ContactRow
-            icon={<MessageCircle size={16} />}
-            label={tr.profile.telegram}
-            value="@metalwork_semey"
-            href={`https://t.me/metalwork_semey`}
-          />
-          <ContactRow
-            icon={<MessageCircle size={16} />}
-            label={tr.profile.whatsapp}
-            value={phone}
-            href={`https://wa.me/${wa}`}
-          />
-          <ContactRow
-            icon={<MapPin size={16} />}
-            label={tr.profile.location}
-            value={tr.profile.locationValue}
-          />
-          <ContactRow
-            icon={<Clock size={16} />}
-            label={tr.profile.hours}
-            value={tr.profile.hoursValue}
-            last
-          />
-        </div>
-
-        {/* How it works */}
-        <div
-          className="rounded-xl p-4"
-          style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-sm)' }}
-        >
-          <p className="text-[14px] font-bold mb-4" style={{ color: 'var(--color-text)' }}>
-            {tr.profile.howItWorks}
-          </p>
-          <div className="flex flex-col gap-4">
-            {tr.profile.steps.map((step, i) => (
-              <div key={i} className="flex gap-3">
-                <div
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-[13px] font-bold flex-shrink-0 mt-0.5"
-                  style={{ background: 'var(--color-steel)', color: 'white' }}
-                >
-                  {i + 1}
-                </div>
-                <div>
-                  <p className="text-[13px] font-semibold" style={{ color: 'var(--color-text)' }}>
-                    {step.title}
-                  </p>
-                  <p className="text-[12px] leading-relaxed mt-0.5" style={{ color: 'var(--color-text-secondary)' }}>
-                    {step.desc}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+          {lang === 'ru' ? 'KZ' : 'RU'}
+        </button>
       </div>
+
+      {/* Menu */}
+      <div
+        className="mx-4 overflow-hidden"
+        style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}
+      >
+        <MenuRow icon={<Package size={17} />} label={tr.profile.menu.orders} />
+        <MenuRow icon={<Heart size={17} />} label={tr.profile.menu.favorites} href="/favorites" badge={count || undefined} />
+        <MenuRow icon={<Store size={17} />} label={tr.profile.menu.about} onClick={() => setAboutOpen(true)} />
+        <MenuRow icon={<HelpCircle size={17} />} label={tr.profile.menu.faq} />
+        <MenuRow icon={<MessageSquare size={17} />} label={tr.profile.menu.contact} onClick={() => setOrderOpen(true)} />
+        <MenuRow icon={<ShieldCheck size={17} />} label={tr.profile.menu.privacy} last />
+      </div>
+
+      {/* Promo */}
+      <div
+        className="mx-4 mt-4 relative overflow-hidden p-5"
+        style={{
+          borderRadius: 'var(--r-md)',
+          background: 'linear-gradient(135deg, #2a2016 0%, #16130f 58%, #121214 100%)',
+          border: '1px solid var(--border)',
+        }}
+      >
+        <div
+          className="absolute pointer-events-none"
+          style={{
+            right: -42,
+            top: -42,
+            width: 170,
+            height: 170,
+            borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(201,151,74,0.22) 0%, rgba(201,151,74,0) 68%)',
+          }}
+        />
+        <p className="relative text-[17px] font-bold leading-snug" style={{ color: 'var(--text)', maxWidth: 220 }}>
+          {tr.profile.promo.title}
+        </p>
+        <p className="relative text-[12.5px] leading-relaxed mt-1.5" style={{ color: 'var(--text-2)', maxWidth: 230 }}>
+          {tr.profile.promo.desc}
+        </p>
+        <button
+          onClick={() => setOrderOpen(true)}
+          className="press relative mt-4 flex items-center gap-2 px-5 text-[13.5px] font-semibold"
+          style={{ height: 44, borderRadius: 'var(--r-full)', background: '#ffffff', color: '#17171a' }}
+        >
+          {tr.profile.promo.cta}
+          <ArrowRight size={15} />
+        </button>
+      </div>
+
+      <AboutWorkshop open={aboutOpen} onClose={() => setAboutOpen(false)} />
+      <OrderSheet open={orderOpen} onClose={() => setOrderOpen(false)} />
     </div>
   )
 }
 
-function ContactRow({
+function MenuRow({
   icon,
   label,
-  value,
   href,
+  onClick,
+  badge,
   last = false,
 }: {
   icon: ReactNode
   label: string
-  value: string
   href?: string
+  onClick?: () => void
+  badge?: number
   last?: boolean
 }) {
+  const interactive = Boolean(href || onClick)
+
   const inner = (
     <div
-      className="flex items-center gap-3 px-4 py-3.5"
-      style={{ borderBottom: last ? 'none' : '1px solid var(--color-border-subtle)' }}
+      className="flex items-center gap-3 px-4"
+      style={{ height: 54, borderBottom: last ? 'none' : '1px solid var(--border)' }}
     >
-      <span style={{ color: 'var(--color-text-muted)' }}>{icon}</span>
-      <div className="flex-1 min-w-0">
-        <p className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>
-          {label}
-        </p>
-        <p className="text-[14px] font-medium truncate" style={{ color: 'var(--color-text)' }}>
-          {value}
-        </p>
-      </div>
-      {href && (
-        <span className="text-[12px] font-medium" style={{ color: 'var(--color-gold)' }}>
-          →
+      <span style={{ color: 'var(--text-2)' }} className="flex-shrink-0">
+        {icon}
+      </span>
+      <span className="flex-1 text-[14px] font-medium truncate" style={{ color: 'var(--text)' }}>
+        {label}
+      </span>
+      {badge !== undefined && (
+        <span
+          className="flex items-center justify-center text-[11px] font-bold flex-shrink-0"
+          style={{ minWidth: 22, height: 22, paddingInline: 6, borderRadius: 'var(--r-full)', background: 'var(--gold)', color: '#1a1205' }}
+        >
+          {badge}
         </span>
       )}
+      <ChevronRight size={16} color="var(--text-3)" className="flex-shrink-0" />
     </div>
   )
 
   if (href) {
     return (
-      <a href={href} target={href.startsWith('http') ? '_blank' : undefined} rel="noopener noreferrer">
+      <Link href={href} className="block active:opacity-70">
         {inner}
-      </a>
+      </Link>
     )
   }
 
-  return inner
+  if (onClick) {
+    return (
+      <button onClick={onClick} className="block w-full text-left active:opacity-70">
+        {inner}
+      </button>
+    )
+  }
+
+  return <div aria-disabled>{interactive ? inner : inner}</div>
 }

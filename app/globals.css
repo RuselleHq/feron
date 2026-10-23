@@ -1,39 +1,60 @@
 @import "tailwindcss";
 
 :root {
-  --color-bg: #ffffff;
-  --color-bg-subtle: #f8f7f5;
-  --color-bg-muted: #f0ede8;
-  --color-surface: #ffffff;
-  --color-border: #e8e4de;
-  --color-border-subtle: #f0ede8;
+  color-scheme: dark;
 
-  --color-text: #1a1a1a;
-  --color-text-secondary: #6b6560;
-  --color-text-muted: #9e9890;
-  --color-text-inverse: #ffffff;
+  /* Surfaces */
+  --bg: #0b0b0c;
+  --bg-app: #000000;
+  --surface: #141416;
+  --surface-2: #1c1c1f;
+  --surface-3: #26262b;
+  --border: rgba(255, 255, 255, 0.07);
+  --border-strong: rgba(255, 255, 255, 0.13);
 
-  --color-steel: #2d3142;
-  --color-steel-light: #3d4258;
-  --color-gold: #c8963e;
-  --color-gold-light: #dba84e;
-  --color-gold-subtle: #f5edd8;
+  /* Text */
+  --text: #f7f7f8;
+  --text-2: #a1a1a8;
+  --text-3: #6e6e76;
 
-  --color-success: #2d7a4f;
-  --color-error: #c0392b;
+  /* Accent */
+  --gold: #c9974a;
+  --gold-soft: #dcb171;
+  --gold-dim: rgba(201, 151, 74, 0.14);
+  --gold-line: rgba(201, 151, 74, 0.38);
 
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 20px;
-  --radius-full: 9999px;
+  /* Status */
+  --danger: #e5484d;
+  --success: #2fbf71;
+  --whatsapp: #25d366;
+  --telegram: #243352;
 
-  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
-  --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
-  --shadow-lg: 0 8px 24px rgba(0,0,0,0.10);
+  /* Radii */
+  --r-xs: 10px;
+  --r-sm: 14px;
+  --r-md: 18px;
+  --r-lg: 22px;
+  --r-xl: 28px;
+  --r-full: 999px;
 
-  --bottom-nav-height: 64px;
-  --top-bar-height: 52px;
+  --nav-height: 64px;
+  --shell-max: 520px;
+
+  /* Back-compat aliases for any legacy inline style */
+  --color-bg: var(--bg);
+  --color-bg-subtle: var(--surface-2);
+  --color-bg-muted: var(--surface-3);
+  --color-surface: var(--surface);
+  --color-border: var(--border);
+  --color-border-subtle: var(--border);
+  --color-text: var(--text);
+  --color-text-secondary: var(--text-2);
+  --color-text-muted: var(--text-3);
+  --color-steel: var(--surface-2);
+  --color-gold: var(--gold);
+  --color-gold-subtle: var(--gold-dim);
+  --color-error: var(--danger);
+  --color-success: var(--success);
 }
 
 * {
@@ -44,22 +65,34 @@
 html {
   font-size: 16px;
   -webkit-text-size-adjust: 100%;
+  background: var(--bg-app);
 }
 
 body {
-  background-color: var(--color-bg);
-  color: var(--color-text);
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  line-height: 1.5;
-  overscroll-behavior: none;
+  margin: 0;
+  background: var(--bg-app);
+  color: var(--text);
+  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+  line-height: 1.45;
+  overscroll-behavior-y: none;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Safe area for notched phones */
-.safe-bottom {
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+/* Phone-shaped shell so wide viewports still read as an app, not a website */
+.app-shell {
+  position: relative;
+  width: 100%;
+  max-width: var(--shell-max);
+  margin: 0 auto;
+  min-height: 100dvh;
+  background: var(--bg);
+  overflow-x: hidden;
 }
 
-/* Scrollbar hide utility */
+.font-display {
+  font-family: var(--font-display), Georgia, serif;
+}
+
 .scrollbar-hide {
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -68,18 +101,89 @@ body {
   display: none;
 }
 
-/* Page transition */
 .page-enter {
-  animation: pageIn 0.2s ease-out;
+  animation: pageIn 0.22s ease-out;
 }
 
 @keyframes pageIn {
-  from { opacity: 0; transform: translateY(6px); }
+  from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* Bottom sheet backdrop */
+.sheet-enter {
+  animation: sheetIn 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes sheetIn {
+  from { transform: translateY(6%); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+
+.overlay-enter {
+  animation: overlayIn 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes overlayIn {
+  from { transform: translateX(14px); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+
 .backdrop {
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+
+.press {
+  transition: transform 0.12s ease, opacity 0.12s ease;
+}
+.press:active {
+  transform: scale(0.97);
+  opacity: 0.85;
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Shared form control, dark */
+.field {
+  width: 100%;
+  padding: 14px 14px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.15s;
+  font-family: inherit;
+  appearance: none;
+}
+.field::placeholder {
+  color: var(--text-3);
+}
+.field:focus {
+  border-color: var(--gold-line);
+}
+.field-with-icon {
+  padding-left: 42px;
+}
+select.field {
+  cursor: pointer;
+}
+select.field option {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type='number'] {
+  -moz-appearance: textfield;
 }
